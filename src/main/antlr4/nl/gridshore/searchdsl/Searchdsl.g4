@@ -13,8 +13,9 @@ import CommonLexerRules;
 
 query               : andQuery | orQuery | term ;
 
-andQuery            : term (AND term)+ ;
 orQuery             : orExpr (OR orExpr)+ ;
 orExpr              : term|andQuery;
+
+andQuery            : term (AND term)+ ;
 term                : WORD+|quotedTerm;
 quotedTerm          : QUOTE WORD+ QUOTE ;
