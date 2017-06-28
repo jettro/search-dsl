@@ -3,9 +3,7 @@ package nl.gridshore.searchdsl;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.Lexer;
-import org.antlr.v4.runtime.tree.TerminalNode;
 
-import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -28,8 +26,7 @@ public class RunStep1 extends AbstractRunStep {
         Step1SearchDslParser parser = new Step1SearchDslParser(commonTokenStream);
         Step1SearchDslParser.QueryContext queryContext = parser.query();
 
-        List<TerminalNode> words = queryContext.WORD();
-        handleWordTokens(words);
+        handleWordTokens(queryContext.WORD());
     }
 
     public static void main(String[] args) {
