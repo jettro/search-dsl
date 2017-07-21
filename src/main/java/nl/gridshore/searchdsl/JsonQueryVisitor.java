@@ -1,7 +1,9 @@
 package nl.gridshore.searchdsl;
 
-import java.util.ArrayList;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by jettrocoenradie on 18/06/2017.
@@ -9,75 +11,85 @@ import java.util.List;
 public class JsonQueryVisitor extends SearchdslBaseVisitor<String> {
     @Override
     public String visitQuery(SearchdslParser.QueryContext ctx) {
-        String query = "";
-        if (ctx.term() != null && !ctx.term().isEmpty()) {
-            query = visitTerm(ctx.term());
-        } else if (ctx.andQuery() != null && !ctx.andQuery().isEmpty()) {
-            query = visitAndQuery(ctx.andQuery());
-        } else if (ctx.orQuery() != null && !ctx.orQuery().isEmpty()) {
-            query = visitOrQuery(ctx.orQuery());
-        }
+        String query = visitChildren(ctx);
 
-        return "{\"query\":" + query + "}";
+        // @formatter:off
+        return
+                "{" +
+                    "\"query\":" + query +
+                "}";
+        // @formatter:on
     }
 
     @Override
     public String visitTerm(SearchdslParser.TermContext ctx) {
-        String termsAsText = "";
-        if (ctx.WORD() != null && !ctx.WORD().isEmpty()) {
-            List<String> terms = new ArrayList<>();
-            ctx.WORD().forEach(searchTermContext -> {
-                terms.add(searchTermContext.getText());
-            });
-            termsAsText = String.join(" ", terms);
+        if (ctx.quotedTerm() != null) {
+            return visit(ctx.quotedTerm());
         }
-        return "{\"match\": {\"_all\":\"" + termsAsText + "\"}}";
+        String wordsAsText = obtainWords(ctx.WORD());
+
+        // @formatter:off
+        return
+                "{" +
+                        "\"match\": {" +
+                            "\"_all\":\"" + wordsAsText + "\"" +
+                        "}" +
+                "}";
+        // @formatter:on
+    }
+
+    @Override
+    public String visitQuotedTerm(SearchdslParser.QuotedTermContext ctx) {
+        String termsAsText = obtainWords(ctx.WORD());
+
+        // @formatter:off
+        return
+                "{" +
+                        "\"match_phrase\": {" +
+                            "\"_all\":\"" + termsAsText + "\"" +
+                        "}" +
+                "}";
+        // @formatter:on
     }
 
     @Override
     public String visitAndQuery(SearchdslParser.AndQueryContext ctx) {
-        List<String> mustQueries = new ArrayList<>();
-
-        if (ctx.term() != null) {
-            ctx.term().forEach(termContext -> {
-                mustQueries.add(visitTerm(termContext));
-            });
-        }
-
+        List<String> mustQueries = ctx.term().stream().map(this::visit).collect(Collectors.toList());
         String query = String.join(",", mustQueries);
+
+        // @formatter:off
         return
-                "{\"bool\": {" +
-                        "\"must\": [" +
-                            query +
-                        "]" +
-                "}}";
+                "{" +
+                        "\"bool\": {" +
+                            "\"must\": [" +
+                                query +
+                            "]" +
+                        "}" +
+                "}";
+        // @formatter:on
     }
 
     @Override
     public String visitOrQuery(SearchdslParser.OrQueryContext ctx) {
-        List<String> shouldQueries = new ArrayList<>();
-        if (!ctx.orExpr().isEmpty()) {
-            ctx.orExpr().forEach(orExprContext -> {
-                shouldQueries.add(visitOrExpr(orExprContext));
-            });
-        }
+        List<String> shouldQueries = ctx.orExpr().stream().map(this::visit).collect(Collectors.toList());
         String query = String.join(",", shouldQueries);
+
+        // @formatter:off
         return
                 "{\"bool\": {" +
                         "\"should\": [" +
                             query +
                         "]" +
                 "}}";
+        // @formatter:on
     }
 
-    @Override
-    public String visitOrExpr(SearchdslParser.OrExprContext ctx) {
-        if (ctx.andQuery() != null) {
-            return visitAndQuery(ctx.andQuery());
-        } else if (ctx.term() != null) {
-            return visitTerm(ctx.term());
+    private String obtainWords(List<TerminalNode> words) {
+        if (words == null || words.isEmpty()) {
+            return "";
         }
-        return "";
-    }
+        List<String> foundWords = words.stream().map(TerminalNode::getText).collect(Collectors.toList());
 
+        return String.join(" ", foundWords);
+    }
 }
