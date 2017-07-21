@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Created by jettrocoenradie on 18/06/2017.
+ * Visitor creating a json string containing the complete query.
  */
 public class JsonQueryVisitor extends SearchdslBaseVisitor<String> {
     @Override

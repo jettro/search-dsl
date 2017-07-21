@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by jettrocoenradie on 18/06/2017.
+ * Visitor that makes use of Jackson to create a JsonNode containing the complete query.
  */
 public class JacksonQueryVisitor extends SearchdslBaseVisitor<JsonNode> {
     private JsonNodeFactory nodeFactory = new JsonNodeFactory(false);
@@ -61,9 +61,7 @@ public class JacksonQueryVisitor extends SearchdslBaseVisitor<JsonNode> {
 
     private TextNode extractTextNodeFromWords(List<TerminalNode> words) {
         List<String> terms = new ArrayList<>();
-        words.forEach(searchTermContext -> {
-            terms.add(searchTermContext.getText());
-        });
+        words.forEach(searchTermContext -> terms.add(searchTermContext.getText()));
         return nodeFactory.textNode(String.join(" ", terms));
     }
 }

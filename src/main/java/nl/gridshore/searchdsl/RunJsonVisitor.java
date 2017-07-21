@@ -1,14 +1,23 @@
 package nl.gridshore.searchdsl;
 
+import java.util.logging.Logger;
+
+/**
+ * Execute the parsing a string using the JsonVisitor
+ */
 public class RunJsonVisitor extends RunVisitor {
+    private static final Logger LOGGER = Logger.getLogger(RunJacksonVisitor.class.getName());
+
     public static void main(String[] args) {
         String searchString = "\"multi search\" && find && doit OR succeed && nothing";
         SearchdslParser.QueryContext tree = createTreeFromString(searchString);
 
-        System.out.println("** Call the json Query Visitor");
+        LOGGER.info("** Call the json Query Visitor");
+
         JsonQueryVisitor jsonQueryVisitor = new JsonQueryVisitor();
         String query = jsonQueryVisitor.visit(tree);
-        System.out.println(query);
+
+        LOGGER.info(query);
 
     }
 }
