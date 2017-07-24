@@ -1,19 +1,20 @@
 grammar Step5SearchDsl;
 import Step5LexerRules;
 
-query               : anyTerm | subQuery ;
+query               : expr | subQuery ;
 
 subQuery            : LEFTBRACKET subQuery RIGHTBRACKET
-                    | anyTerm (AND anyTerm)+
-                    | anyTerm (OR anyTerm)+
+                    | expr (AND expr)+
+                    | expr (OR expr)+
                     | subQuery (AND subQuery)+
                     | subQuery (OR subQuery)+
-                    | subQuery AND anyTerm
-                    | subQuery OR anyTerm
-                    | anyTerm AND subQuery
-                    | anyTerm OR subQuery;
+                    | subQuery AND expr
+                    | subQuery OR expr
+                    | expr AND subQuery
+                    | expr OR subQuery
+                    | NOT subQuery;
 
-anyTerm             : term | notTerm ;
+expr                : term | notTerm ;
 notTerm             : NOT term ;
 term                : WORD+|quotedTerm ;
 quotedTerm          : QUOTE WORD+ QUOTE ;

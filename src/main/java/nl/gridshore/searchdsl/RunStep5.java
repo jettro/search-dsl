@@ -6,8 +6,13 @@ import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.MUST;
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.MUST_NOT;
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.SHOULD;
 
 public class RunStep5 extends AbstractRunStep {
 
@@ -37,6 +42,21 @@ public class RunStep5 extends AbstractRunStep {
         new RunStep5("(apple AND raspberry) OR (juice AND fruit)");
         new RunStep5("(apple AND (raspberry OR mango)) OR juice");
         new RunStep5("\"apple juice\" OR applejuice");
+        new RunStep5("apple AND NOT (raspberry OR NOT mango) AND juice");
+    }
+
+    public enum BoolQueryType {
+        MUST("must"), MUST_NOT("must_not"), SHOULD("should");
+
+        private String type;
+
+        BoolQueryType(String type) {
+            this.type = type;
+        }
+
+        public String type() {
+            return this.type;
+        }
     }
 
     public class Step5Visitor extends Step5SearchDslBaseVisitor<String> {
@@ -45,16 +65,7 @@ public class RunStep5 extends AbstractRunStep {
         public String visitNotTerm(Step5SearchDslParser.NotTermContext ctx) {
             String termQuery = visit(ctx.term());
 
-            // @formatter:off
-            return
-                    "{" +
-                            "\"bool\": {" +
-                                "\"must_not\": [" +
-                                    termQuery +
-                                "]" +
-                            "}" +
-                    "}";
-            // @formatter:on
+            return boolQuery(MUST_NOT, Collections.singletonList(termQuery));
         }
 
         @Override
@@ -94,36 +105,28 @@ public class RunStep5 extends AbstractRunStep {
             if (ctx.subQuery() != null) {
                 ctx.subQuery().forEach(subQueryContext -> items.add(visit(subQueryContext)));
             }
-            if (ctx.anyTerm() != null) {
-                ctx.anyTerm().forEach(anyTermContext -> items.add(visit(anyTermContext)));
+            if (ctx.expr() != null) {
+                ctx.expr().forEach(anyTermContext -> items.add(visit(anyTermContext)));
             }
 
-            String itemsString = String.join(",", items);
+            String query;
             if (!ctx.AND().isEmpty()) {
-                // @formatter:off
-                return
-                        "{" +
-                                "\"bool\": {" +
-                                    "\"must\": [" +
-                                         itemsString +
-                                    "]" +
-                                "}" +
-                        "}";
-                // @formatter:on
+                if (ctx.NOT() != null) {
+                    query = boolQuery(MUST_NOT, items);
+                } else {
+                    query = boolQuery(MUST, items);
+                }
             } else if (!ctx.OR().isEmpty()) {
-                // @formatter:off
-                return
-                        "{" +
-                                "\"bool\": {" +
-                                    "\"should\": [" +
-                                        itemsString +
-                                    "]" +
-                                "}" +
-                        "}";
-                // @formatter:on
+                query = boolQuery(SHOULD, items);
             } else {
-                return itemsString;
+                query = String.join(",", items);
             }
+
+            if (ctx.NOT() != null && ctx.AND().isEmpty()) {
+                query = boolQuery(MUST_NOT, Collections.singletonList(query));
+            }
+
+            return query;
         }
 
         private String obtainWords(List<TerminalNode> words) {
@@ -135,6 +138,21 @@ public class RunStep5 extends AbstractRunStep {
             return String.join(" ", foundWords);
         }
 
-    }
+        private String boolQuery(BoolQueryType type, List<String> queries) {
+            String boolQueries = String.join(",", queries);
 
+            return String.format(
+                    // @formatter:off
+                    "{" +
+                        "\"bool\": {" +
+                            "\"%s\": [" +
+                                "%s" +
+                            "]" +
+                        "}" +
+                    "}"
+                    // @formatter:on
+                    , type.type(), boolQueries);
+        }
+
+    }
 }
