@@ -9,7 +9,8 @@ public class RunJsonVisitor extends RunVisitor {
     private static final Logger LOGGER = Logger.getLogger(RunJacksonVisitor.class.getName());
 
     public static void main(String[] args) {
-        String searchString = "\"multi search\" && find && doit OR succeed && nothing";
+//        String searchString = "\"multi search\" && find && doit OR succeed && nothing";
+        String searchString = "(apple AND (raspberry OR mango)) OR juice";
         SearchdslParser.QueryContext tree = createTreeFromString(searchString);
 
         LOGGER.info("** Call the json Query Visitor");

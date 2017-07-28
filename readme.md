@@ -13,7 +13,9 @@ java -classpath "target/search-dsl-1.0-SNAPSHOT.jar:target/dependency/*"  nl.gri
 # What is in the project
 The project contains a number of steps. Each step becomes a bit more complicated. The end result is in Searchdsl.g4, CommonLexerRules.g4, RunJacksonVisitor and RunJsonVisitor.
 
-The final classes JsonQueryVisitor and JacksonQueryVisitor are also testen using junit and json-path from jayway.
+The final classes JsonQueryVisitor and JacksonQueryVisitor are also tested using junit and json-path from jayway. Some example queries that we support:
+
+
 
 # References
 

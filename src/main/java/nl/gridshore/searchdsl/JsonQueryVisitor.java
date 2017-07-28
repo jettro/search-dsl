@@ -2,23 +2,25 @@ package nl.gridshore.searchdsl;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.MUST;
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.MUST_NOT;
+import static nl.gridshore.searchdsl.RunStep5.BoolQueryType.SHOULD;
 
 /**
  * Visitor creating a json string containing the complete query.
  */
 public class JsonQueryVisitor extends SearchdslBaseVisitor<String> {
-    @Override
-    public String visitQuery(SearchdslParser.QueryContext ctx) {
-        String query = visitChildren(ctx);
 
-        // @formatter:off
-        return
-                "{" +
-                    "\"query\":" + query +
-                "}";
-        // @formatter:on
+    @Override
+    public String visitNotTerm(SearchdslParser.NotTermContext ctx) {
+        String termQuery = visit(ctx.term());
+
+        return boolQuery(MUST_NOT, Collections.singletonList(termQuery));
     }
 
     @Override
@@ -53,34 +55,44 @@ public class JsonQueryVisitor extends SearchdslBaseVisitor<String> {
     }
 
     @Override
-    public String visitAndQuery(SearchdslParser.AndQueryContext ctx) {
-        List<String> mustQueries = ctx.term().stream().map(this::visit).collect(Collectors.toList());
-        String query = String.join(",", mustQueries);
+    public String visitSubQuery(SearchdslParser.SubQueryContext ctx) {
+        List<String> items = new ArrayList<>();
+        if (ctx.subQuery() != null) {
+            ctx.subQuery().forEach(subQueryContext -> items.add(visit(subQueryContext)));
+        }
+        if (ctx.expr() != null) {
+            ctx.expr().forEach(anyTermContext -> items.add(visit(anyTermContext)));
+        }
+
+        String query;
+        if (!ctx.AND().isEmpty()) {
+            if (ctx.NOT() != null) {
+                query = boolQuery(MUST_NOT, items);
+            } else {
+                query = boolQuery(MUST, items);
+            }
+        } else if (!ctx.OR().isEmpty()) {
+            query = boolQuery(SHOULD, items);
+        } else {
+            query = String.join(",", items);
+        }
+
+        if (ctx.NOT() != null && ctx.AND().isEmpty()) {
+            query = boolQuery(MUST_NOT, Collections.singletonList(query));
+        }
+
+        return query;
+    }
+
+    @Override
+    public String visitQuery(SearchdslParser.QueryContext ctx) {
+        String query = visitChildren(ctx);
 
         // @formatter:off
         return
                 "{" +
-                        "\"bool\": {" +
-                            "\"must\": [" +
-                                query +
-                            "]" +
-                        "}" +
+                    "\"query\":" + query +
                 "}";
-        // @formatter:on
-    }
-
-    @Override
-    public String visitOrQuery(SearchdslParser.OrQueryContext ctx) {
-        List<String> shouldQueries = ctx.orExpr().stream().map(this::visit).collect(Collectors.toList());
-        String query = String.join(",", shouldQueries);
-
-        // @formatter:off
-        return
-                "{\"bool\": {" +
-                        "\"should\": [" +
-                            query +
-                        "]" +
-                "}}";
         // @formatter:on
     }
 
@@ -92,4 +104,21 @@ public class JsonQueryVisitor extends SearchdslBaseVisitor<String> {
 
         return String.join(" ", foundWords);
     }
+
+    private String boolQuery(RunStep5.BoolQueryType type, List<String> queries) {
+        String boolQueries = String.join(",", queries);
+
+        return String.format(
+                // @formatter:off
+                    "{" +
+                        "\"bool\": {" +
+                            "\"%s\": [" +
+                                "%s" +
+                            "]" +
+                        "}" +
+                    "}"
+                    // @formatter:on
+                , type.type(), boolQueries);
+    }
+
 }

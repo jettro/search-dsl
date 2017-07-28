@@ -24,6 +24,11 @@ public class JacksonQueryVisitorTest extends QueryVisitorParent {
     }
 
     @Test
+    public void testNotQuery() {
+        notQuery();
+    }
+
+    @Test
     public void testAndQuery() {
         andQuery();
     }
@@ -34,8 +39,23 @@ public class JacksonQueryVisitorTest extends QueryVisitorParent {
     }
 
     @Test
+    public void testAndNotQuery() {
+        andNotQuery();
+    }
+
+    @Test
     public void testAndOrPhraseQuery() {
         andOrPhraseQuery();
+    }
+
+    @Test
+    public void testMultipleOperatorsAndNested() {
+        multipleOperatorsAndNested();
+    }
+
+    @Test
+    public void testAndNotNested() {
+        andNotNested();
     }
 
     public String createQueryString(String query) {

@@ -15,12 +15,18 @@ import java.util.List;
 public class JacksonQueryVisitor extends SearchdslBaseVisitor<JsonNode> {
     private JsonNodeFactory nodeFactory = new JsonNodeFactory(false);
 
-
     @Override
-    public JsonNode visitQuery(SearchdslParser.QueryContext ctx) {
-        JsonNode queryNode = visitChildren(ctx);
+    public JsonNode visitNotTerm(SearchdslParser.NotTermContext ctx) {
+        ArrayNode mustNotNodes = nodeFactory.arrayNode();
+        mustNotNodes.add(visitTerm(ctx.term()));
 
-        return nodeFactory.objectNode().set("query", queryNode);
+        return createBoolQueryNode(mustNotNodes, BoolQueryType.MUST_NOT);
+    }
+
+    private JsonNode createBoolQueryNode(ArrayNode boolItems, BoolQueryType boolQueryType) {
+        JsonNode mustNotNode = nodeFactory.objectNode().set(boolQueryType.type(), boolItems);
+
+        return nodeFactory.objectNode().set("bool", mustNotNode);
     }
 
     @Override
@@ -35,6 +41,39 @@ public class JacksonQueryVisitor extends SearchdslBaseVisitor<JsonNode> {
     }
 
     @Override
+    public JsonNode visitSubQuery(SearchdslParser.SubQueryContext ctx) {
+        ArrayNode boolNodes = nodeFactory.arrayNode();
+
+        if (ctx.subQuery() != null) {
+            ctx.subQuery().forEach(subQueryContext -> boolNodes.add(visit(subQueryContext)));
+        }
+        if (ctx.expr() != null) {
+            ctx.expr().forEach(exprContext -> boolNodes.add(visit(exprContext)));
+        }
+
+        JsonNode query;
+        if (!ctx.AND().isEmpty()) {
+            if (ctx.NOT() != null) {
+                query = createBoolQueryNode(boolNodes, BoolQueryType.MUST_NOT);
+            } else {
+                query = createBoolQueryNode(boolNodes, BoolQueryType.MUST);
+            }
+        } else if (!ctx.OR().isEmpty()) {
+            query = createBoolQueryNode(boolNodes, BoolQueryType.SHOULD);
+        } else {
+            query = boolNodes.get(0);
+        }
+
+        if (ctx.NOT() != null && ctx.AND().isEmpty()) {
+            ArrayNode contained = nodeFactory.arrayNode();
+            contained.add(query);
+            query = createBoolQueryNode(contained, BoolQueryType.MUST_NOT);
+        }
+
+        return query;
+    }
+
+    @Override
     public JsonNode visitQuotedTerm(SearchdslParser.QuotedTermContext ctx) {
         JsonNode allNode = nodeFactory.objectNode().set("_all", extractTextNodeFromWords(ctx.WORD()));
 
@@ -42,21 +81,10 @@ public class JacksonQueryVisitor extends SearchdslBaseVisitor<JsonNode> {
     }
 
     @Override
-    public JsonNode visitAndQuery(SearchdslParser.AndQueryContext ctx) {
-        ArrayNode mustNodes = nodeFactory.arrayNode();
-        ctx.term().forEach(termContext -> mustNodes.add(visitTerm(termContext)));
+    public JsonNode visitQuery(SearchdslParser.QueryContext ctx) {
+        JsonNode queryNode = visitChildren(ctx);
 
-        JsonNode mustNode = nodeFactory.objectNode().set("must", mustNodes);
-        return nodeFactory.objectNode().set("bool", mustNode);
-    }
-
-    @Override
-    public JsonNode visitOrQuery(SearchdslParser.OrQueryContext ctx) {
-        ArrayNode shouldNodes = nodeFactory.arrayNode();
-        ctx.orExpr().forEach(orExprContext -> shouldNodes.add(visitOrExpr(orExprContext)));
-
-        JsonNode shouldNode = nodeFactory.objectNode().set("should", shouldNodes);
-        return nodeFactory.objectNode().set("bool", shouldNode);
+        return nodeFactory.objectNode().set("query", queryNode);
     }
 
     private TextNode extractTextNodeFromWords(List<TerminalNode> words) {
