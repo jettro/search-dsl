@@ -23,5 +23,5 @@ https://tomassetti.me/antlr-mega-tutorial/#java-setup
 
 # Blogs
 
-https://amsterdam.luminis.eu/2017/06/28/creating-search-dsl/
-https://amsterdam.luminis.eu/2017/07/21/creating-search-dsl-part-2/
+- Step 1-4: https://www.luminis.eu/blog/search-en/creating-a-search-dsl
+- Step 5 - Visitor Pattern: https://amsterdam.luminis.eu/2017/07/21/creating-search-dsl-part-2/
